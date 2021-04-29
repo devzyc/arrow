@@ -1,0 +1,3 @@
+include ':arrow'
+include ':app'
+rootProject.name = "KotlinGearProject"
