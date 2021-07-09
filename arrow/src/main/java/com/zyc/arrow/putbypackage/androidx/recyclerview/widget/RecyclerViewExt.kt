@@ -9,17 +9,16 @@ import androidx.recyclerview.widget.RecyclerView
  */
 class RecyclerViewExt {
 
-  fun RecyclerView.click(position: Int, @IdRes clickableAreaResId: Int) {
+  fun RecyclerView.click(position: Int, @IdRes clickableAreaResId: Int = 0) {
     postDelayed({
       val viewHolder = findViewHolderForAdapterPosition(position)
       if (viewHolder == null) {
         Toast.makeText(context, "切换列表项失败", Toast.LENGTH_SHORT)
           .show()
       } else {
-        val v =
-          if (clickableAreaResId == 0) viewHolder.itemView
-          else viewHolder.itemView.findViewById(clickableAreaResId)
-        v.performClick()
+        (if (clickableAreaResId == 0) viewHolder.itemView
+        else viewHolder.itemView.findViewById(clickableAreaResId))
+          .performClick()
       }
     }, 500)
   }
