@@ -1,3 +1,4 @@
 include ':arrow'
 include ':app'
 rootProject.name = "LibArrowProject"
+include ':lib2'
