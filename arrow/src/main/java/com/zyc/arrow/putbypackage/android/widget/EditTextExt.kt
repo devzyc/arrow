@@ -5,4 +5,4 @@ import android.widget.EditText
 /**
  * @author zengyongchang_2010@163.com
  */
-val EditText.content get() = text.toString()
+val EditText.content get() = text.toString().trim()
