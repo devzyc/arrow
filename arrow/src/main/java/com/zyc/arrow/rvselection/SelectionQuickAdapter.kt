@@ -1,6 +1,7 @@
 package com.zyc.arrow.rvselection
 
 import android.view.View
+import androidx.annotation.CallSuper
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
 
@@ -18,6 +19,7 @@ abstract class SelectionQuickAdapter<T>(
         helper.itemView.setOnClickListener { _: View? -> handleClicked(item) }
     }
 
+    @CallSuper
     protected fun handleClicked(clickedItem: T) {
         notifyDataSetChanged()
     }
