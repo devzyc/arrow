@@ -20,11 +20,11 @@ abstract class SelectionQuickAdapter<T>(
     }
 
     @CallSuper
-    protected fun handleClicked(clickedItem: T) {
+    protected open fun handleClicked(clickedItem: T) {
         notifyDataSetChanged()
     }
 
-    fun checked(viewHolder: BaseViewHolder): Boolean {
-        return selectionSupport.isItemChecked(viewHolder.adapterPosition)
+    protected fun checked(viewHolder: BaseViewHolder): Boolean {
+        return selectionSupport.isItemChecked(viewHolder.absoluteAdapterPosition)
     }
 }
