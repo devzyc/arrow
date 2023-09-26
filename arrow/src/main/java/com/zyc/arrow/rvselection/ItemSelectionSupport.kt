@@ -5,6 +5,8 @@ import android.os.Parcel
 import android.os.Parcelable
 import android.util.LongSparseArray
 import android.util.SparseBooleanArray
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import android.widget.Checkable
 import androidx.recyclerview.widget.RecyclerView
@@ -18,7 +20,77 @@ class ItemSelectionSupport(
         NONE, SINGLE, MULTIPLE
     }
 
-    private val mTouchListener: TouchListener
+    val detector = GestureDetector(
+        mRecyclerView.context,
+        object : GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapUp(e: MotionEvent): Boolean {
+                val position = mRecyclerView.run {
+                    getChildAdapterPosition(findChildViewUnder(e.x, e.y)!!)
+                }
+                val adapter = mRecyclerView.adapter
+                var checkedStateChanged = false
+                when (mChoiceMode) {
+                    ChoiceMode.MULTIPLE -> {
+                        val checked = !mCheckedStates!![position, false]
+                        mCheckedStates!!.put(position, checked)
+                        if (mCheckedIdStates != null && adapter!!.hasStableIds()) {
+                            if (checked) {
+                                mCheckedIdStates!!.put(adapter.getItemId(position), position)
+                            } else {
+                                mCheckedIdStates!!.delete(adapter.getItemId(position))
+                            }
+                        }
+                        val itemCount = mRecyclerView.adapter!!.itemCount
+                        if (checked) {
+                            checkedItemCount++
+                            if (checkedItemCount == itemCount && mAllSelectedListener != null) {
+                                mAllSelectedListener!!.onChanged(true)
+                            }
+                        } else {
+                            checkedItemCount--
+                            // 仅适用于mCheckedCount变化量为1的情况，下面的判断是为了减少mAllSelectedListener频繁地回调
+                            if (checkedItemCount == itemCount - 1 && mAllSelectedListener != null) {
+                                mAllSelectedListener!!.onChanged(false)
+                            }
+                        }
+                        checkedStateChanged = true
+                    }
+
+                    ChoiceMode.SINGLE -> {
+                        val checked = !mCheckedStates!![position, false]
+                        if (checked) {
+                            mCheckedStates!!.clear()
+                            mCheckedStates!!.put(position, true)
+                            if (mCheckedIdStates != null && adapter!!.hasStableIds()) {
+                                mCheckedIdStates!!.clear()
+                                mCheckedIdStates!!.put(adapter.getItemId(position), position)
+                            }
+                            checkedItemCount = 1
+                        } else if (mCheckedStates!!.size() == 0 || !mCheckedStates!!.valueAt(0)) {
+                            checkedItemCount = 0
+                        }
+                        checkedStateChanged = true
+                    }
+
+                    else -> Unit
+                }
+
+                if (checkedStateChanged) {
+                    updateOnScreenCheckedViews()
+                }
+                return false
+            }
+        }
+    )
+    private val mTouchListener = object : RecyclerView.SimpleOnItemTouchListener() {
+        override fun onInterceptTouchEvent(
+            recyclerView: RecyclerView,
+            motionEvent: MotionEvent,
+        ): Boolean {
+            detector.onTouchEvent(motionEvent)
+            return false
+        }
+    }
     private var mAllSelectedListener: OnAllSelectedListener? = null
     private var mChoiceMode = ChoiceMode.NONE
     private var mCheckedStates: CheckedStates? = null
@@ -43,7 +115,6 @@ class ItemSelectionSupport(
     private var mEnableTouch = false
 
     init {
-        mTouchListener = TouchListener(mRecyclerView)
         setTouchEnabled(enableTouch)
     }
 
@@ -354,6 +425,7 @@ class ItemSelectionSupport(
         companion object {
             private const val FALSE = 0
             private const val TRUE = 1
+
             @JvmField
             val CREATOR: Parcelable.Creator<CheckedStates?> = object : Parcelable.Creator<CheckedStates?> {
                 override fun createFromParcel(`in`: Parcel): CheckedStates? {
@@ -408,72 +480,6 @@ class ItemSelectionSupport(
                 }
             }
         }
-    }
-
-    private inner class TouchListener internal constructor(recyclerView: RecyclerView?) : ClickItemTouchListener(recyclerView!!) {
-        override fun performItemClick(
-            parent: RecyclerView?,
-            view: View?,
-            position: Int,
-            id: Long
-        ): Boolean {
-            val adapter = mRecyclerView.adapter
-            var checkedStateChanged = false
-            if (mChoiceMode == ChoiceMode.MULTIPLE) {
-                val checked = !mCheckedStates!![position, false]
-                mCheckedStates!!.put(position, checked)
-                if (mCheckedIdStates != null && adapter!!.hasStableIds()) {
-                    if (checked) {
-                        mCheckedIdStates!!.put(adapter.getItemId(position), position)
-                    } else {
-                        mCheckedIdStates!!.delete(adapter.getItemId(position))
-                    }
-                }
-                val itemCount = mRecyclerView.adapter!!.itemCount
-                if (checked) {
-                    checkedItemCount++
-                    if (checkedItemCount == itemCount && mAllSelectedListener != null) {
-                        mAllSelectedListener!!.onChanged(true)
-                    }
-                } else {
-                    checkedItemCount--
-                    // 仅适用于mCheckedCount变化量为1的情况，下面的判断是为了减少mAllSelectedListener频繁地回调
-                    if (checkedItemCount == itemCount - 1 && mAllSelectedListener != null) {
-                        mAllSelectedListener!!.onChanged(false)
-                    }
-                }
-                checkedStateChanged = true
-            } else if (mChoiceMode == ChoiceMode.SINGLE) {
-                val checked = !mCheckedStates!![position, false]
-                if (checked) {
-                    mCheckedStates!!.clear()
-                    mCheckedStates!!.put(position, true)
-                    if (mCheckedIdStates != null && adapter!!.hasStableIds()) {
-                        mCheckedIdStates!!.clear()
-                        mCheckedIdStates!!.put(adapter.getItemId(position), position)
-                    }
-                    checkedItemCount = 1
-                } else if (mCheckedStates!!.size() == 0 || !mCheckedStates!!.valueAt(0)) {
-                    checkedItemCount = 0
-                }
-                checkedStateChanged = true
-            }
-            if (checkedStateChanged) {
-                updateOnScreenCheckedViews()
-            }
-            return false
-        }
-
-        override fun performItemLongClick(
-            parent: RecyclerView?,
-            view: View?,
-            position: Int,
-            id: Long
-        ): Boolean {
-            return true
-        }
-
-        override fun onRequestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {}
     }
 
     interface OnAllSelectedListener {
