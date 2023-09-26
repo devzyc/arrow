@@ -1,3 +1,5 @@
+@file:Suppress("FoldInitializerAndIfToElvis")
+
 package com.zyc.arrow.rvselection
 
 import android.os.Bundle
@@ -24,8 +26,13 @@ class ItemSelectionSupport(
         mRecyclerView.context,
         object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapUp(e: MotionEvent): Boolean {
-                val position = mRecyclerView.run {
-                    getChildAdapterPosition(findChildViewUnder(e.x, e.y)!!)
+                val childView = mRecyclerView.findChildViewUnder(e.x, e.y)
+                if (childView == null) {
+                    return false
+                }
+                val position = mRecyclerView.getChildAdapterPosition(childView)
+                if (position == RecyclerView.NO_POSITION) {
+                    return false
                 }
                 val adapter = mRecyclerView.adapter
                 var checkedStateChanged = false
